@@ -67,7 +67,9 @@ class _DownloaderPageState extends State<DownloaderPage> {
     final idMatch = RegExp(r'(\d+)$').firstMatch(url);
     final id = idMatch?.group(1) ?? '';
     url = "https://free-sasflix.com/api/VideoStream/hls-playlist/$id";
+    
     final name = nameController.text.trim();
+
 
     if (url.isEmpty || name.isEmpty || saveDir == null) {
       setState(() => status = 'Укажите название, ссылку и директорию');
@@ -82,7 +84,22 @@ class _DownloaderPageState extends State<DownloaderPage> {
       totalDuration = null;
     });
 
-    final outputPath = p.join(saveDir!.path, '$name.mp4');
+    String sanitizeFileName(String input, {String replacement = "_"}) {
+      // Заменяем недопустимые символы
+      final regex = RegExp(r'[<>:"/\\|?*\x00-\x1F]|[\s]+');
+      final sanitized = input.replaceAll(regex, replacement);
+
+      // Удаляем ведущие и завершающие точки/пробелы (актуально для Windows)
+      final trimmed = sanitized.replaceAll(RegExp(r'^[\.\s]+|[\.\s]+$'), '');
+
+      // Ограничиваем длину имени (например, 255 символов)
+      const maxLength = 255;
+      return trimmed.length > maxLength 
+          ? trimmed.substring(0, maxLength) 
+          : trimmed;
+    }
+
+    final outputPath = p.join(saveDir!.path, sanitizeFileName("$name.mp4"));
 
     _ffmpegProcess = await Process.start('ffmpeg', [
       '-http_persistent', '1',
